@@ -1,5 +1,5 @@
 .
-.TH "JQ" "1" "May 2024" "" ""
+.TH "JQ" "1" "September 2024" "" ""
 .
 .SH "NAME"
 \fBjq\fR \- Command\-line JSON processor
@@ -1340,11 +1340,14 @@ jq \'[paths(type == "number")]\'
 .
 .IP "" 0
 .
-.SS "add"
+.SS "add, add(generator)"
 The filter \fBadd\fR takes as input an array, and produces as output the elements of the array added together\. This might mean summed, concatenated or merged depending on the types of the elements of the input array \- the rules are the same as those for the \fB+\fR operator (described above)\.
 .
 .P
 If the input is an empty array, \fBadd\fR returns \fBnull\fR\.
+.
+.P
+\fBadd(generator)\fR operates on the given generator rather than the input\.
 .
 .IP "" 4
 .
@@ -1361,6 +1364,10 @@ jq \'add\'
 jq \'add\'
    []
 => null
+
+jq \'add(\.[]\.a)\'
+   [{"a":3}, {"a":5}, {"b":6}]
+=> 8
 .
 .fi
 .
@@ -2192,7 +2199,7 @@ This builtin returns true if jq was built with "decnum", which is the current li
 This builtin binding shows the jq executable\'s build configuration\. Its value has no particular format, but it can be expected to be at least the \fB\./configure\fR command\-line arguments, and may be enriched in the future to include the version strings for the build tooling used\.
 .
 .P
-Note that this can be overriden in the command\-line with \fB\-\-arg\fR and related options\.
+Note that this can be overridden in the command\-line with \fB\-\-arg\fR and related options\.
 .
 .SS "$ENV, env"
 \fB$ENV\fR is an object representing the environment variables as set when the jq program started\.
@@ -2323,6 +2330,12 @@ Applies HTML/XML escaping, by mapping the characters \fB<>&\'"\fR to their entit
 Applies percent\-encoding, by mapping all reserved URI characters to a \fB%XX\fR sequence\.
 .
 .TP
+\fB@urid\fR:
+.
+.IP
+The inverse of \fB@uri\fR, applies percent\-decoding, by mapping all \fB%XX\fR sequences to their corresponding URI characters\.
+.
+.TP
 \fB@csv\fR:
 .
 .IP
@@ -2433,7 +2446,7 @@ The \fBlocaltime\fR builtin works like the \fBgmtime\fR builtin, but using the l
 The \fBmktime\fR builtin consumes "broken down time" representations of time output by \fBgmtime\fR and \fBstrptime\fR\.
 .
 .P
-The \fBstrptime(fmt)\fR builtin parses input strings matching the \fBfmt\fR argument\. The output is in the "broken down time" representation consumed by \fBgmtime\fR and output by \fBmktime\fR\.
+The \fBstrptime(fmt)\fR builtin parses input strings matching the \fBfmt\fR argument\. The output is in the "broken down time" representation consumed by \fBmktime\fR and output by \fBgmtime\fR\.
 .
 .P
 The \fBstrftime(fmt)\fR builtin formats a time (GMT) with the given format\. The \fBstrflocaltime\fR does the same, but using the local timezone setting\.
@@ -3422,16 +3435,31 @@ jq \'isempty(\.[])\'
 .
 .IP "" 0
 .
-.SS "limit(n; exp)"
-The \fBlimit\fR function extracts up to \fBn\fR outputs from \fBexp\fR\.
+.SS "limit(n; expr)"
+The \fBlimit\fR function extracts up to \fBn\fR outputs from \fBexpr\fR\.
 .
 .IP "" 4
 .
 .nf
 
-jq \'[limit(3;\.[])]\'
+jq \'[limit(3; \.[])]\'
    [0,1,2,3,4,5,6,7,8,9]
 => [0,1,2]
+.
+.fi
+.
+.IP "" 0
+.
+.SS "skip(n; expr)"
+The \fBskip\fR function skips the first \fBn\fR outputs from \fBexpr\fR\.
+.
+.IP "" 4
+.
+.nf
+
+jq \'[skip(3; \.[])]\'
+   [0,1,2,3,4,5,6,7,8,9]
+=> [3,4,5,6,7,8,9]
 .
 .fi
 .
@@ -4096,7 +4124,7 @@ Consecutive components with the same name are not allowed to avoid ambiguities (
 For example, with \fB\-L$HOME/\.jq\fR a module \fBfoo\fR can be found in \fB$HOME/\.jq/foo\.jq\fR and \fB$HOME/\.jq/foo/foo\.jq\fR\.
 .
 .P
-If \fB$HOME/\.jq\fR is a file, it is sourced into the main program\.
+If \fB\.jq\fR exists in the user\'s home directory, and is a file (not a directory), it is automatically sourced into the main program\.
 .
 .SS "import RelativePathString as NAME [<metadata>];"
 Imports a module found at the given path relative to a directory in a search path\. A \fB\.jq\fR suffix will be added to the relative path string\. The module\'s symbols are prefixed with \fBNAME::\fR\.

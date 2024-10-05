@@ -1980,7 +1980,7 @@ sections:
           future to include the version strings for the build
           tooling used.
 
-          Note that this can be overriden in the command-line
+          Note that this can be overridden in the command-line
           with `--arg` and related options.
 
       - title: "`$ENV`, `env`"
@@ -2207,7 +2207,7 @@ sections:
 
           The `strptime(fmt)` builtin parses input strings matching the
           `fmt` argument.  The output is in the "broken down time"
-          representation consumed by `gmtime` and output by `mktime`.
+          representation consumed by `mktime` and output by `gmtime`.
 
           The `strftime(fmt)` builtin formats a time (GMT) with the
           given format.  The `strflocaltime` does the same, but using

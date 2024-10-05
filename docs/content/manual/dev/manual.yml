@@ -1300,7 +1300,7 @@ sections:
             input: '[1,[[],{"a":2}]]'
             output: ['[[0],[1,1,"a"]]']
 
-      - title: "`add`"
+      - title: "`add`, `add(generator)`"
         body: |
 
           The filter `add` takes as input an array, and produces as
@@ -1310,6 +1310,9 @@ sections:
           as those for the `+` operator (described above).
 
           If the input is an empty array, `add` returns `null`.
+
+          `add(generator)` operates on the given generator rather than
+          the input.
 
         examples:
           - program: add
@@ -1321,6 +1324,9 @@ sections:
           - program: add
             input: '[]'
             output: ["null"]
+          - program: add(.[].a)
+            input: '[{"a":3}, {"a":5}, {"b":6}]'
+            output: ['8']
 
       - title: "`any`, `any(condition)`, `any(generator; condition)`"
         body: |
@@ -2020,7 +2026,7 @@ sections:
           future to include the version strings for the build
           tooling used.
 
-          Note that this can be overriden in the command-line
+          Note that this can be overridden in the command-line
           with `--arg` and related options.
 
       - title: "`$ENV`, `env`"
@@ -2135,6 +2141,11 @@ sections:
             Applies percent-encoding, by mapping all reserved URI
             characters to a `%XX` sequence.
 
+          * `@urid`:
+
+            The inverse of `@uri`, applies percent-decoding, by mapping
+            all `%XX` sequences to their corresponding URI characters.
+
           * `@csv`:
 
             The input must be an array, and it is rendered as CSV
@@ -2247,7 +2258,7 @@ sections:
 
           The `strptime(fmt)` builtin parses input strings matching the
           `fmt` argument.  The output is in the "broken down time"
-          representation consumed by `gmtime` and output by `mktime`.
+          representation consumed by `mktime` and output by `gmtime`.
 
           The `strftime(fmt)` builtin formats a time (GMT) with the
           given format.  The `strflocaltime` does the same, but using
@@ -3026,15 +3037,25 @@ sections:
             input: '[1,2,3]'
             output: ['false']
 
-      - title: "`limit(n; exp)`"
+      - title: "`limit(n; expr)`"
         body: |
 
-          The `limit` function extracts up to `n` outputs from `exp`.
+          The `limit` function extracts up to `n` outputs from `expr`.
 
         examples:
-          - program: '[limit(3;.[])]'
+          - program: '[limit(3; .[])]'
             input: '[0,1,2,3,4,5,6,7,8,9]'
             output: ['[0,1,2]']
+
+      - title: "`skip(n; expr)`"
+        body: |
+
+          The `skip` function skips the first `n` outputs from `expr`.
+
+        examples:
+          - program: '[skip(3; .[])]'
+            input: '[0,1,2,3,4,5,6,7,8,9]'
+            output: ['[3,4,5,6,7,8,9]']
 
       - title: "`first(expr)`, `last(expr)`, `nth(n; expr)`"
         body: |
@@ -3680,7 +3701,8 @@ sections:
       For example, with `-L$HOME/.jq` a module `foo` can be found in
       `$HOME/.jq/foo.jq` and `$HOME/.jq/foo/foo.jq`.
 
-      If `$HOME/.jq` is a file, it is sourced into the main program.
+      If `.jq` exists in the user's home directory, and is a file (not a
+      directory), it is automatically sourced into the main program.
 
     entries:
       - title: "`import RelativePathString as NAME [<metadata>];`"
