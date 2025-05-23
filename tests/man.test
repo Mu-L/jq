@@ -444,6 +444,13 @@ sqrt
 1
 1
 
+.[] | toboolean
+["true", "false", true, false]
+true
+false
+true
+false
+
 .[] | tostring
 [1, "1", [1]]
 "1"
@@ -609,6 +616,10 @@ combinations(2)
 [.[]|rtrimstr("foo")]
 ["fo", "foo", "barfoo", "foobar", "foob"]
 ["fo","","bar","foobar","foob"]
+
+[.[]|trimstr("foo")]
+["fo", "foo", "barfoo", "foobarfoo", "foob"]
+["fo","","bar","bar","b"]
 
 trim, ltrim, rtrim
 " abc "
@@ -942,14 +953,14 @@ def while(cond; update): def _while: if cond then ., (update | _while) else empt
 1
 [1,2,4,8,16,32,64]
 
-truncate_stream([[0],1],[[1,0],2],[[1,0]],[[1]])
+truncate_stream([[0],"a"],[[1,0],"b"],[[1,0]],[[1]])
 1
-[[0],2]
+[[0],"b"]
 [[0]]
 
-fromstream(1|truncate_stream([[0],1],[[1,0],2],[[1,0]],[[1]]))
+fromstream(1|truncate_stream([[0],"a"],[[1,0],"b"],[[1,0]],[[1]]))
 null
-[2]
+["b"]
 
 . as $dot|fromstream($dot|tostream)|.==$dot
 [0,[1,{"a":1},{"b":2}]]

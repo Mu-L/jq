@@ -155,6 +155,13 @@ cmp $d/out $d/expected
 printf "[1,2][3,4]\n" | $JQ -cs add > $d/out 2>&1
 cmp $d/out $d/expected
 
+# Regression test for #3273
+echo "[[[0],1],[[0]],[[0],2],[[0]]]" > $d/expected
+printf "[1][2]" | $JQ -c -s --stream . > $d/out 2>&1
+cmp $d/out $d/expected
+printf "[1][2]\n" | $JQ -c -s --stream . > $d/out 2>&1
+cmp $d/out $d/expected
+
 # Regression test for --raw-output0
 printf "a\0b\0" > $d/expected
 printf '["a", "b"]' | $VALGRIND $Q $JQ --raw-output0 '.[]' > $d/out
@@ -634,6 +641,29 @@ EOF
   fi
 fi
 
+# Test syntax error messages of multiline filter (we can't test in jq.test)
+if $VALGRIND $Q $JQ -n '[
+  try if .
+         then 1
+         else 2
+  catch ]' > $d/out 2>&1; then
+  echo 'syntax error not detected'
+  exit 1
+fi
+cat > $d/expected <<EOF
+jq: error: syntax error, unexpected catch, expecting end or '|' or ',' at <top-level>, line 5, column 3:
+      catch ]
+      ^^^^^
+jq: error: Possibly unterminated 'if' statement at <top-level>, line 2, column 7:
+      try if .
+          ^^^^
+jq: error: Possibly unterminated 'try' statement at <top-level>, line 2, column 3:
+      try if .
+      ^^^^^^^^
+jq: 3 compile errors
+EOF
+diff $d/out $d/expected
+
 # Comments!
 if ! x=$($JQ -n '123 # comment') || [ "$x" != 123 ]; then
   echo 'comment did not work'
@@ -724,6 +754,13 @@ if ! $msys && ! $mingw; then
 
   if ! r=$(TZ=Europe/Paris $JQ -rn '1731627341 | strflocaltime("%F %T %z %Z")') \
     || [ "$r" != "2024-11-15 00:35:41 +0100 CET" ]; then
+    echo "Incorrectly formatted local time"
+    exit 1
+  fi
+
+  # Test when DST is in effect: #1912
+  if ! r=$(TZ=Europe/Paris $JQ -rn '1750500000 | strflocaltime("%F %T %z %Z")') \
+    || [ "$r" != "2025-06-21 12:00:00 +0200 CEST" ]; then
     echo "Incorrectly formatted local time"
     exit 1
   fi
