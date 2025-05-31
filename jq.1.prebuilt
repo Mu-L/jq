@@ -1,5 +1,5 @@
 .
-.TH "JQ" "1" "January 2025" "" ""
+.TH "JQ" "1" "May 2025" "" ""
 .
 .SH "NAME"
 \fBjq\fR \- Command\-line JSON processor
@@ -1557,6 +1557,21 @@ jq \'\.[] | tonumber\'
 .
 .IP "" 0
 .
+.SS "toboolean"
+The \fBtoboolean\fR function parses its input as a boolean\. It will convert correctly\-formatted strings to their boolean equivalent, leave booleans alone, and give an error on all other input\.
+.
+.IP "" 4
+.
+.nf
+
+jq \'\.[] | toboolean\'
+   ["true", "false", true, false]
+=> true, false, true, false
+.
+.fi
+.
+.IP "" 0
+.
 .SS "tostring"
 The \fBtostring\fR function prints its input as a string\. Strings are left unchanged, and all other values are JSON\-encoded\.
 .
@@ -1939,6 +1954,21 @@ Outputs its input with the given suffix string removed, if it ends with it\.
 jq \'[\.[]|rtrimstr("foo")]\'
    ["fo", "foo", "barfoo", "foobar", "foob"]
 => ["fo","","bar","foobar","foob"]
+.
+.fi
+.
+.IP "" 0
+.
+.SS "trimstr(str)"
+Outputs its input with the given string removed at both ends, if it starts or ends with it\.
+.
+.IP "" 4
+.
+.nf
+
+jq \'[\.[]|trimstr("foo")]\'
+   ["fo", "foo", "barfoo", "foobarfoo", "foob"]
+=> ["fo","","bar","bar","b"]
 .
 .fi
 .
@@ -3032,6 +3062,10 @@ These provide the same results as their \fBsplit\fR counterparts, but as a strea
 jq \'splits(", *")\'
    "ab,cd,   ef, gh"
 => "ab", "cd", "ef", "gh"
+
+jq \'splits(",? *"; "n")\'
+   "ab,cd ef,  gh"
+=> "ab", "cd", "ef", "gh"
 .
 .fi
 .
@@ -3791,7 +3825,7 @@ However, streaming isn\'t easy to deal with as the jq program will have \fB[<pat
 Several builtins are provided to make handling streams easier\.
 .
 .P
-The examples below use the streamed form of \fB[0,[1]]\fR, which is \fB[[0],0],[[1,0],1],[[1,0]],[[1]]\fR\.
+The examples below use the streamed form of \fB["a",["b"]]\fR, which is \fB[[0],"a"],[[1,0],"b"],[[1,0]],[[1]]\fR\.
 .
 .P
 Streaming forms include \fB[<path>, <leaf\-value>]\fR (to indicate any scalar value, empty array, or empty object), and \fB[<path>]\fR (to indicate the end of an array or object)\. Future versions of jq run with \fB\-\-stream\fR and \fB\-\-seq\fR may output additional forms such as \fB["error message"]\fR when an input text fails to parse\.
@@ -3803,9 +3837,9 @@ Consumes a number as input and truncates the corresponding number of path elemen
 .
 .nf
 
-jq \'truncate_stream([[0],1],[[1,0],2],[[1,0]],[[1]])\'
+jq \'truncate_stream([[0],"a"],[[1,0],"b"],[[1,0]],[[1]])\'
    1
-=> [[0],2], [[0]]
+=> [[0],"b"], [[0]]
 .
 .fi
 .
@@ -3818,9 +3852,9 @@ Outputs values corresponding to the stream expression\'s outputs\.
 .
 .nf
 
-jq \'fromstream(1|truncate_stream([[0],1],[[1,0],2],[[1,0]],[[1]]))\'
+jq \'fromstream(1|truncate_stream([[0],"a"],[[1,0],"b"],[[1,0]],[[1]]))\'
    null
-=> [2]
+=> ["b"]
 .
 .fi
 .

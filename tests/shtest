@@ -155,6 +155,13 @@ cmp $d/out $d/expected
 printf "[1,2][3,4]\n" | $JQ -cs add > $d/out 2>&1
 cmp $d/out $d/expected
 
+# Regression test for #3273
+echo "[[[0],1],[[0]],[[0],2],[[0]]]" > $d/expected
+printf "[1][2]" | $JQ -c -s --stream . > $d/out 2>&1
+cmp $d/out $d/expected
+printf "[1][2]\n" | $JQ -c -s --stream . > $d/out 2>&1
+cmp $d/out $d/expected
+
 # Regression test for --raw-output0
 printf "a\0b\0" > $d/expected
 printf '["a", "b"]' | $VALGRIND $Q $JQ --raw-output0 '.[]' > $d/out
@@ -433,6 +440,21 @@ JQ_COLORS='4;31' $JQ -Ccn . > $d/color
 printf '\033[4;31mnull\033[0m\n' > $d/expect
 cmp $d/color $d/expect
 
+## Set implicit empty color, null input
+$JQ -Ccn . > $d/color
+printf '\033[0;90mnull\033[0m\n' > $d/expect
+cmp $d/color $d/expect
+
+## Set explicit empty color, null input
+JQ_COLORS=':' $JQ -Ccn . > $d/color
+printf '\033[mnull\033[0m\n' > $d/expect
+cmp $d/color $d/expect
+
+## Extra colors, null input
+JQ_COLORS='::::::::' $JQ -Ccn . > $d/color
+printf '\033[mnull\033[0m\n' > $d/expect
+cmp $d/color $d/expect
+
 ## Default colors, complex input
 $JQ -Ccn '[{"a":true,"b":false},"abc",123,null]' > $d/color
 {
@@ -477,6 +499,30 @@ JQ_COLORS='0;30:0;31:0;32:0;33:0;34:1;35:1;36:1;37' \
   printf '\033[1;35m,\033[0m'
   printf '\033[0;30mnull\033[0m'
   printf '\033[1;35m]\033[0m\n'
+} > $d/expect
+cmp $d/color $d/expect
+
+## Set non-default colors only for literals, complex input
+JQ_COLORS='0;37:0;31:0;35:0;34:0;36' \
+  $JQ -Ccn '[{"a":true,"b":false},"abc",123,null]' > $d/color
+{
+  printf '\033[1;39m[\033[0m'
+  printf '\033[1;39m{\033[0m'
+  printf '\033[1;34m"a"\033[0m'
+  printf '\033[1;39m:\033[0m'
+  printf '\033[0;35mtrue\033[0m'
+  printf '\033[1;39m,\033[0m'
+  printf '\033[1;34m"b"\033[0m'
+  printf '\033[1;39m:\033[0m'
+  printf '\033[0;31mfalse\033[0m'
+  printf '\033[1;39m}\033[0m'
+  printf '\033[1;39m,\033[0m'
+  printf '\033[0;36m"abc"\033[0m'
+  printf '\033[1;39m,\033[0m'
+  printf '\033[0;34m123\033[0m'
+  printf '\033[1;39m,\033[0m'
+  printf '\033[0;37mnull\033[0m'
+  printf '\033[1;39m]\033[0m\n'
 } > $d/expect
 cmp $d/color $d/expect
 
@@ -527,33 +573,41 @@ JQ_COLORS='0;30:0;31:0;32:0;33:0;34:1;35:1;36:1;37' \
 } > $d/expect
 cmp $d/color $d/expect
 
-# Check garbage in JQ_COLORS.  We write each color sequence into a 16
-# char buffer that needs to hold ESC [ <color> m NUL, so each color
-# sequence can be no more than 12 chars (bytes).  These emit a warning
-# on stderr.
-set -vx
+## Set truecolor, complex input, indented
+JQ_COLORS=$(printf '38;2;%s:' \
+  '255;173;173' '255;214;165' '253;255;182' '202;255;191' \
+  '155;246;255' '160;196;255' '189;178;255' '255;198;255') \
+  $JQ -Cn '[{"a":true,"b":false},"abc",123,null]' > $d/color
+{
+  printf '\033[38;2;160;196;255m[\033[0m\n'
+  printf '  \033[38;2;189;178;255m{\033[0m\n'
+  printf '    \033[38;2;255;198;255m"a"\033[0m'
+  printf '\033[38;2;189;178;255m:\033[0m '
+  printf '\033[38;2;253;255;182mtrue\033[0m'
+  printf '\033[38;2;189;178;255m,\033[0m\n'
+  printf '    \033[38;2;255;198;255m"b"\033[0m'
+  printf '\033[38;2;189;178;255m:\033[0m '
+  printf '\033[38;2;255;214;165mfalse\033[0m\n'
+  printf '  \033[38;2;189;178;255m}\033[0m'
+  printf '\033[38;2;160;196;255m,\033[0m\n'
+  printf '  \033[38;2;155;246;255m"abc"\033[0m'
+  printf '\033[38;2;160;196;255m,\033[0m\n'
+  printf '  \033[38;2;202;255;191m123\033[0m'
+  printf '\033[38;2;160;196;255m,\033[0m\n'
+  printf '  \033[38;2;255;173;173mnull\033[0m\n'
+  printf '\033[38;2;160;196;255m]\033[0m\n'
+} > $d/expect
+cmp $d/color $d/expect
+
+# Check invalid JQ_COLORS
 echo 'Failed to set $JQ_COLORS' > $d/expect_warning
 $JQ -Ccn '[{"a":true,"b":false},"abc",123,null]' > $d/expect
-JQ_COLORS='garbage;30:*;31:,;3^:0;$%:0;34:1;35:1;36' \
-  $JQ -Ccn '[{"a":true,"b":false},"abc",123,null]' > $d/color 2>$d/warning
-cmp $d/color $d/expect
-cmp $d/warning $d/expect_warning
-JQ_COLORS='1234567890123456789;30:0;31:0;32:0;33:0;34:1;35:1;36' \
-  $JQ -Ccn '[{"a":true,"b":false},"abc",123,null]' > $d/color 2>$d/warning
-cmp $d/color $d/expect
-cmp $d/warning $d/expect_warning
-JQ_COLORS='1;31234567890123456789:0;31:0;32:0;33:0;34:1;35:1;36' \
-  $JQ -Ccn '[{"a":true,"b":false},"abc",123,null]' > $d/color 2>$d/warning
-cmp $d/color $d/expect
-cmp $d/warning $d/expect_warning
-JQ_COLORS='1234567890123456;1234567890123456:1234567890123456;1234567890123456:1234567890123456;1234567890123456:1234567890123456;1234567890123456:1234567890123456;1234567890123456:1234567890123456;1234567890123456:1234567890123456;1234567890123456' \
-  $JQ -Ccn '[{"a":true,"b":false},"abc",123,null]' > $d/color 2>$d/warning
-cmp $d/color $d/expect
-cmp $d/warning $d/expect_warning
-JQ_COLORS="0123456789123:0123456789123:0123456789123:0123456789123:0123456789123:0123456789123:0123456789123:0123456789123:" \
-  $JQ -Ccn '[{"a":true,"b":false},"abc",123,null]' > $d/color 2>$d/warning
-cmp $d/color $d/expect
-cmp $d/warning $d/expect_warning
+for colors in '/' '[30' '30m' '30:31m:32' '30:*:31' 'invalid'; do
+  JQ_COLORS=$colors \
+    $JQ -Ccn '[{"a":true,"b":false},"abc",123,null]' > $d/color 2>$d/warning
+  cmp $d/color $d/expect
+  cmp $d/warning $d/expect_warning
+done
 
 # Check $NO_COLOR
 test_no_color=true
@@ -633,6 +687,29 @@ EOF
     fi
   fi
 fi
+
+# Test syntax error messages of multiline filter (we can't test in jq.test)
+if $VALGRIND $Q $JQ -n '[
+  try if .
+         then 1
+         else 2
+  catch ]' > $d/out 2>&1; then
+  echo 'syntax error not detected'
+  exit 1
+fi
+cat > $d/expected <<EOF
+jq: error: syntax error, unexpected catch, expecting end or '|' or ',' at <top-level>, line 5, column 3:
+      catch ]
+      ^^^^^
+jq: error: Possibly unterminated 'if' statement at <top-level>, line 2, column 7:
+      try if .
+          ^^^^
+jq: error: Possibly unterminated 'try' statement at <top-level>, line 2, column 3:
+      try if .
+      ^^^^^^^^
+jq: 3 compile errors
+EOF
+diff $d/out $d/expected
 
 # Comments!
 if ! x=$($JQ -n '123 # comment') || [ "$x" != 123 ]; then
@@ -724,6 +801,13 @@ if ! $msys && ! $mingw; then
 
   if ! r=$(TZ=Europe/Paris $JQ -rn '1731627341 | strflocaltime("%F %T %z %Z")') \
     || [ "$r" != "2024-11-15 00:35:41 +0100 CET" ]; then
+    echo "Incorrectly formatted local time"
+    exit 1
+  fi
+
+  # Test when DST is in effect: #1912
+  if ! r=$(TZ=Europe/Paris $JQ -rn '1750500000 | strflocaltime("%F %T %z %Z")') \
+    || [ "$r" != "2025-06-21 12:00:00 +0200 CEST" ]; then
     echo "Incorrectly formatted local time"
     exit 1
   fi
