@@ -422,12 +422,15 @@ int main(int argc, char* argv[]) {
             fprintf(stderr, "jq: --indent takes one parameter\n");
             die();
           }
-          dumpopts &= ~(JV_PRINT_TAB | JV_PRINT_INDENT_FLAGS(7));
-          int indent = atoi(argv[i+1]);
-          if (indent < -1 || indent > 7) {
+          char* end = NULL;
+          errno = 0;
+          long indent = strtol(argv[i+1], &end, 10);
+          if (errno || indent < -1 || indent > 7 ||
+              isspace(*argv[i+1]) || end == argv[i+1] || *end) {
             fprintf(stderr, "jq: --indent takes a number between -1 and 7\n");
             die();
           }
+          dumpopts &= ~(JV_PRINT_TAB | JV_PRINT_INDENT_FLAGS(7));
           dumpopts |= JV_PRINT_INDENT_FLAGS(indent);
           i++;
         } else if (isoption(&text, 0, "seq", is_short)) {
@@ -551,7 +554,7 @@ int main(int argc, char* argv[]) {
   if (options & COLOR_OUTPUT) dumpopts |= JV_PRINT_COLOR;
   if (options & NO_COLOR_OUTPUT) dumpopts &= ~JV_PRINT_COLOR;
 
-  if (getenv("JQ_COLORS") != NULL && !jq_set_colors(getenv("JQ_COLORS")))
+  if (!jq_set_colors(getenv("JQ_COLORS")))
       fprintf(stderr, "Failed to set $JQ_COLORS\n");
 
   if (jv_get_kind(lib_search_paths) == JV_KIND_NULL) {

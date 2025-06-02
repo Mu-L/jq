@@ -11,7 +11,7 @@
 typedef const char* presult;
 
 #ifndef MAX_PARSING_DEPTH
-#define MAX_PARSING_DEPTH (256)
+#define MAX_PARSING_DEPTH (10000)
 #endif
 
 #define TRY(x) do {presult msg__ = (x); if (msg__) return msg__; } while(0)
@@ -516,7 +516,7 @@ static pfunc check_literal(struct jv_parser* p) {
     return "Invalid string literal; expected \", but got '";
   case 'n':
     // if it starts with 'n', it could be a literal "nan"
-    if (p->tokenbuf[1] == 'u') {
+    if (p->tokenpos > 1 && p->tokenbuf[1] == 'u') {
       pattern = "null"; plen = 4; v = jv_null();
     }
   }
