@@ -711,6 +711,8 @@ $locales
 EOF
   if [ -z "$l" ]; then
     echo "WARNING: Not testing localization"
+  elif [ "$(LC_ALL=C date +%a%b)" = "$(LC_ALL=$l date +%a%b)" ]; then
+    echo "WARNING: Date does not produce locale-dependent output for $l, skipping localization test"
   else
     dt1=$(LC_ALL=$l date +'%a %d %b %Y at %H:%M:%S')
     dt2=$(LC_ALL=$l $JQ -nr 'now | strflocaltime("%a %d %b %Y at %H:%M:%S")')
